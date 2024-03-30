@@ -1,0 +1,63 @@
+#include "msp430.h"                     ; #define controlled include file
+
+        NAME    main                    ; module name
+
+        PUBLIC  main                    ; make the main label vissible
+                                        ; outside this module
+        ORG 300H
+relogio DB "00:00:00"
+
+        ORG     0FFFEh
+        DC16    init                    ; set reset vector to 'init' label
+
+        RSEG    CSTACK                  ; pre-declaration of segment
+        RSEG    CODE                    ; place program in 'CODE' segment
+
+init:   MOV     #SFE(CSTACK), SP        ; set up stack
+
+main:   NOP                             ; main program
+        MOV.W   #WDTPW+WDTHOLD,&WDTCTL  ; Stop watchdog timer
+        
+        MOV #relogio, R4                ;move relogio para R4
+        
+clock   INC.B 7(R4)                     ;Incrementa 1 segundo
+        CMP.B #':',7(R4)                ;Confere 7(R4) já atingiu o valor 9
+        JNZ clock                       ;Se 7(R4)>9, zera e volta a contagem
+        
+          MOV.B #'0', 7(R4)             ;zera 1 segundo
+          INC.B 6(R4)                   ;Incrementa 10 segundos
+          CMP.B #'6', 6(R4)             ;Confere se 6(R4) já atingiu o valor 6
+          JNZ clock                     ;Se 6(R4)>5, zera e volta a contagem
+          
+          MOV.B #'0', 6(R4)             ;Zera 10 segundos
+          INC.B 4(R4)                   ;Incrementa 1 minuto
+          CMP.B #':', 4(R4)             ;
+          JNZ clock
+            
+          MOV.B #'0', 4(R4)         ;zera minuto
+          INC.B 3(R4)               ;incrementa 10 minutos
+          CMP.B #'6', 3(R4)         ;Confere se dezena de minuto > 5
+          JNZ clock                 ;Se dezenamin > 5, zera a dezena de min
+              
+          MOV.B #'0', 3(R4)         ;zera a dezena de minuto
+          CMP.B #'2', 0(R4)         ;Confere se a dezenahora = 2
+          JZ volta
+          INC.B 1(R4)
+          CMP.B #':', 1(R4)
+          JNZ clock
+           MOV.B #'0', 1(R4)
+           INC.B 0(R4)
+           JMP clock
+                  
+                  ;Se dezena de horas = 2 
+volta             INC.B 1(R4)
+                  CMP.B #'4', 1(R4)
+                  JNZ clock             
+                    MOV.B #'0', 1(R4)  
+                    MOV.B #'0', 0(R4)
+                    JMP clock           ;volta a contagem
+                   
+                  
+        JMP $                           ; jump to current location '$'
+                                        ; (endless loop)
+        END
